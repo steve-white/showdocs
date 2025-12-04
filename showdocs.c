@@ -299,6 +299,11 @@
 
  // Load configuration from file and command line
  void load_config(Config *config, int argc, char *argv[]) {
+     // Handle --version flag
+     if (argc > 1 && (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-v") == 0)) {
+         exit(EXIT_SUCCESS);
+     }
+     
      char config_file[MAX_PATH_LEN];
      get_config_filename(argv[0], config_file, sizeof(config_file));
      
