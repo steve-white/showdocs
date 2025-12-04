@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ACME Server API Documentation</title>
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify/themes/vue.css">
+  <!-- Breadcrumb styling -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify-breadcrumb@latest/dist/breadcrumb.min.css">
+  <!-- Sidebar collapse styling -->
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify-sidebar-collapse/dist/sidebar.min.css">
+  <style>
+    /* Fix main content width when sidebar collapses */
+    .sidebar-toggle {
+      background-color: transparent;
+      border: none;
+    }
+    
+    /* Adjust markdown section to use more width when sidebar is closed */
+    .markdown-section {
+      max-width: 95% !important;
+      padding: 10px 15px 40px 15px
+    }
+    .content {
+      padding-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: false });
+    window.mermaid = mermaid;
+  </script>
+  <script>
+    window.$docsify = {
+      name: 'ACME Server API Documentation',
+      loadSidebar: true,
+      subMaxLevel: 3,
+      sidebarDisplayLevel: 1,
+      alias: {
+        '/.*/_sidebar.md': '/_sidebar.md'
+      },
+      auto2top: true,
+      breadcrumb: {
+        showHome: true,
+        homeText: 'Home',
+        separator: ' › ',
+        casing: 'capitalize',
+        size: 'small'
+      },
+      markdown: {
+        renderer: {
+          code: function(code, lang) {
+            if (lang === "mermaid") {
+              return '<div class="mermaid">' + code + '</div>';
+            }
+            return this.origin.code.apply(this, arguments);
+          }
+        }
+      },
+      plugins: [
+        function(hook) {
+          hook.doneEach(function() {
+            // Remove any existing mermaid SVGs
+            document.querySelectorAll('.mermaid[data-processed="true"]').forEach(el => {
+              el.removeAttribute('data-processed');
+              el.innerHTML = el.textContent;
+            });
+            
+            // Re-render all mermaid diagrams
+            if (window.mermaid) {
+              window.mermaid.run({
+                querySelector: '.mermaid'
+              });
+            }
+          });
+        }
+      ]
+    }
+  </script>
+  <script src="//cdn.jsdelivr.net/npm/docsify/lib/docsify.min.js"></script>
+  <!-- Breadcrumb plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify-breadcrumb@latest/dist/index.min.js"></script>
+  <!-- Sidebar collapse plugin -->
+  <script src="//cdn.jsdelivr.net/npm/docsify-sidebar-collapse/dist/docsify-sidebar-collapse.min.js"></script>
+</body>
+</html>
