@@ -346,6 +346,13 @@
          exit(EXIT_FAILURE);
      }
 
+     // Set SO_REUSEADDR to allow immediate reuse of the port
+     int reuse = 1;
+     if (setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, 
+                    (const char*)&reuse, sizeof(reuse)) < 0) {
+         log_message(LOG_WARN, "Failed to set SO_REUSEADDR");
+     }
+     
      struct sockaddr_in server_addr;
      memset(&server_addr, 0, sizeof(server_addr));
      server_addr.sin_family = AF_INET;
