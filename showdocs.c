@@ -52,6 +52,7 @@ typedef int socklen_t;
 #include <unistd.h>
 #include <signal.h>
 #include <arpa/inet.h>
+#include <strings.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -98,7 +99,7 @@ void get_timestamp(char *buffer, size_t max_len)
     struct tm *t = localtime(&tv.tv_sec);
     char time_str[32];
     strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", t);
-    snprintf(buffer, max_len, "%s.%03ld", time_str, tv.tv_usec / 1000);
+    snprintf(buffer, max_len, "%s.%03d", time_str, (int)(tv.tv_usec / 1000));
 #endif
 }
 
