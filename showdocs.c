@@ -397,7 +397,7 @@ void signal_handler(int signal)
         called = 1;
 
         log_message(LOG_INFO, "Received termination signal, shutting down gracefully...");
-        g_should_run = 0;
+        g_run = 0;
         // Don't close socket here - let select() timeout handle it
     }
 }
@@ -747,7 +747,7 @@ int main(int argc, char *argv[])
     // Main server loop
     while (g_run)
     {
-        // Use select() with timeout to allow checking g_should_run periodically
+        // Use select() with timeout to allow checking g_run periodically
         fd_set read_fds;
         FD_ZERO(&read_fds);
         FD_SET(g_server_sock, &read_fds);
@@ -785,7 +785,7 @@ int main(int argc, char *argv[])
         int client_sock = accept(g_server_sock, (struct sockaddr *)&client_addr, &client_len);
         if (client_sock < 0)
         {
-            if (!g_should_run)
+            if (!g_run)
                 break; // Interrupted by signal
 #endif
             log_message(LOG_ERROR, "Accept failed");
