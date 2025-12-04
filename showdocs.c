@@ -113,23 +113,22 @@
      fflush(stdout);
  }
 
- // Configuration structure
- typedef struct {
-     int port;
-     char root_dir[MAX_PATH_LEN];
-     char exec_start[MAX_CMD_LEN];
-     char exec_start_win[MAX_CMD_LEN];
-     char exec_start_linux[MAX_CMD_LEN];
-     char exec_start_macos[MAX_CMD_LEN];
- } Config;
-
- // Forward declarations
+// Configuration structure
+typedef struct {
+    int port;
+    char listen_addr[64];
+    char root_dir[MAX_PATH_LEN];
+    char exec_start[MAX_CMD_LEN];
+    char exec_start_win[MAX_CMD_LEN];
+    char exec_start_linux[MAX_CMD_LEN];
+    char exec_start_macos[MAX_CMD_LEN];
+} Config; // Forward declarations
  void send_http_response(int client_sock, const char *status_line, const char *filename, 
                         const char *date_str, const char *root_dir);
 
  // Display version information
  void print_version(void) {
-     printf("showdocs v%s\n", VERSION);
+     printf("Version: v%s\n", VERSION);
      // Format the build date to be more readable
      char formatted_date[32];
      strncpy(formatted_date, BUILD_DATE, sizeof(formatted_date));
@@ -198,13 +197,16 @@
              while (key_end > key && isspace((unsigned char)*key_end)) *key_end-- = 0;
              while (isspace((unsigned char)*value)) value++;
              
-             // Match keys (case insensitive)
-             if (strcasecmp(key, "Port") == 0) {
-                 config->port = atoi(value);
-             } else if (strcasecmp(key, "RootDir") == 0) {
-                 strncpy(config->root_dir, value, MAX_PATH_LEN - 1);
-                 config->root_dir[MAX_PATH_LEN - 1] = 0;
-             } else if (strcasecmp(key, "ExecStart") == 0) {
+            // Match keys (case insensitive)
+            if (strcasecmp(key, "Port") == 0) {
+                config->port = atoi(value);
+            } else if (strcasecmp(key, "ListenAddr") == 0 || strcasecmp(key, "ListenAddress") == 0) {
+                strncpy(config->listen_addr, value, sizeof(config->listen_addr) - 1);
+                config->listen_addr[sizeof(config->listen_addr) - 1] = 0;
+            } else if (strcasecmp(key, "RootDir") == 0) {
+                strncpy(config->root_dir, value, MAX_PATH_LEN - 1);
+                config->root_dir[MAX_PATH_LEN - 1] = 0;
+            } else if (strcasecmp(key, "ExecStart") == 0) {
                  strncpy(config->exec_start, value, MAX_CMD_LEN - 1);
                  config->exec_start[MAX_CMD_LEN - 1] = 0;
              } else if (strcasecmp(key, "ExecStart_Win") == 0 || strcasecmp(key, "ExecStart_Windows") == 0) {
@@ -287,17 +289,17 @@
      #endif
  }
 
- // Initialize configuration with defaults
- void init_config(Config *config) {
-     config->port = 8080;
-     config->root_dir[0] = 0;
-     config->exec_start[0] = 0;
-     config->exec_start_win[0] = 0;
-     config->exec_start_linux[0] = 0;
-     config->exec_start_macos[0] = 0;
- }
-
- // Load configuration from file and command line
+// Initialize configuration with defaults
+void init_config(Config *config) {
+    config->port = 8080;
+    strncpy(config->listen_addr, "127.0.0.1", sizeof(config->listen_addr) - 1);
+    config->listen_addr[sizeof(config->listen_addr) - 1] = '\0';
+    config->root_dir[0] = 0;
+    config->exec_start[0] = 0;
+    config->exec_start_win[0] = 0;
+    config->exec_start_linux[0] = 0;
+    config->exec_start_macos[0] = 0;
+} // Load configuration from file and command line
  void load_config(Config *config, int argc, char *argv[]) {
      // Handle --version flag
      if (argc > 1 && (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-v") == 0)) {
@@ -352,15 +354,22 @@
                     (const char*)&reuse, sizeof(reuse)) < 0) {
          log_message(LOG_WARN, "Failed to set SO_REUSEADDR");
      }
-     
-     struct sockaddr_in server_addr;
-     memset(&server_addr, 0, sizeof(server_addr));
-     server_addr.sin_family = AF_INET;
-     server_addr.sin_port = htons(config->port);
-     server_addr.sin_addr.s_addr = INADDR_ANY;
 
-     if (bind(server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-         log_message(LOG_ERROR, "Bind failed on port %d", config->port);
+    struct sockaddr_in server_addr;
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(config->port);
+    
+    // Parse the listen address
+    if (inet_pton(AF_INET, config->listen_addr, &server_addr.sin_addr) <= 0) {
+        log_message(LOG_ERROR, "Invalid listen address: %s", config->listen_addr);
+        close(server_sock);
+        cleanup_networking();
+        exit(EXIT_FAILURE);
+    }
+
+    if (bind(server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        log_message(LOG_ERROR, "Bind failed on %s:%d", config->listen_addr, config->port);
          close(server_sock);
          cleanup_networking();
          exit(EXIT_FAILURE);
@@ -373,11 +382,10 @@
          exit(EXIT_FAILURE);
      }
      
-     log_message(LOG_INFO, "Web server started successfully on port %d", config->port);
-     return server_sock;
- }
-
- // Determine which ExecStart command to use
+    
+    log_message(LOG_INFO, "Web server started successfully on %s:%d", config->listen_addr, config->port);
+    return server_sock;
+} // Determine which ExecStart command to use
  const char* get_exec_command(Config *config) {
      const char *exec_cmd = NULL;
      
