@@ -13,6 +13,10 @@
 
  */
 
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200112L
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
